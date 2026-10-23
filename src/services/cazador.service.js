@@ -1,0 +1,40 @@
+import jwt from 'jsonwebtoken';
+import { CAZADORES_SEMILLA } from '../models/cazador.model.js'
+import { PerfilCazadorDTO } from '../dtos/cazador.dto.js'
+
+export const JWT_SECRET = process.env.JWT_SECRET;
+export const JWT_EXPIRES_IN = '2h';
+const recompensasMemoria = [];
+
+export const cazadorService = {
+    async buscarPorUsername(username){
+        const limpio = String(username ?? '').trim().toLocaleLowerCase();
+        return CAZADORES_SEMILLA.find((c) => c.username.toLocaleLowerCase() === limpio) ?? null;
+    },
+
+    async buscarPorSub(sub){
+        const cazador = CAZADORES_SEMILLA.find((c) => c.sub === String(sub));
+        return cazador ? new PerfilCazadorDTO(cazador) : null;
+    },
+
+    async listarUsuarios(){
+        return CAZADORES_SEMILLA.map((cazador) => new PerfilCazadorDTO(cazador));
+    },
+
+    async firmarToken(cazador){
+        const payload = {
+            sub: cazador.sub,
+            username: cazador.username,
+            name: cazador.name,
+            rango: cazador.rango,
+            admin: Boolean(cazador.admin)
+        }
+        return jwt.sign(payload, JWT_SECRET, { algorithm: 'HS256', expiresIn: JWT_EXPIRES_IN });
+    },    
+
+    async crearRecompensa(datos, adminUsername){
+        const nueva = { id: `bov-${Date.now()}`, ...datos, autorizadoPor: adminUsername, createdAt: new Date().toISOString() };
+        recompensasMemoria.unshift(nueva);
+        return nueva;
+    }
+}
